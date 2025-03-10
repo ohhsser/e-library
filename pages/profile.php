@@ -1,0 +1,1 @@
+<?php include './components/profileComponent.php'; ?> <!-- Default Page Load -->
