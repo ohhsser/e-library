@@ -41,7 +41,7 @@ if (!$user) {
 ?>
 
 
-<div class="flex justify-center items-center w-full h-[calc(100vh-70px)] bg-white">
+<div class="flex justify-center items-center w-full h-[calc(100vh-70px)] bg-white mt-16">
     <!-- Sidebar -->
     <!-- <aside class="w-64 bg-white shadow-md p-6">
         <h2 class="text-xl font-bold text-gray-800">Settings</h2>

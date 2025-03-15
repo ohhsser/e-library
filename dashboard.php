@@ -11,15 +11,20 @@ include 'header.php';
 <?php include './components/navbar.php'; ?>
 
 <?php
+$user_role = isset($_COOKIE["user_data"]) ? json_decode($_COOKIE["user_data"])[3] : $_SESSION['user_data'][3];
+if ($user_role === "user") {
+    $allowed_pages = ['home', 'profile', 'books'];
+}
 
-$allowed_pages = ['home', 'profile', 'books'];
-
+if ($user_role === "admin") {
+    $allowed_pages = ['home', 'profile', 'books'];
+}
 
 $page = isset($_GET['page']) ? $_GET['page'] : 'home';
 
 
 if (!in_array($page, $allowed_pages)) {
-    $page = 'home';
+    $page = '404';
 }
 ?>
 
@@ -40,7 +45,6 @@ if (!in_array($page, $allowed_pages)) {
                 const page = this.getAttribute("data-page");
 
                 history.pushState({ page }, "", `?page=${page}`);
-
                 window.location.replace(`?page=${page}`);
             });
         });

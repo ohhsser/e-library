@@ -1,5 +1,5 @@
-<div class="bg-white text-black">
-    <nav class="w-full bg-white text-black p-4 shadow-md sticky top-0">
+<div class="bg-white text-black fixed w-full top-0 z-50">
+    <nav class="w-full bg-white text-black p-4 shadow-md ">
         <div class="w-full px-3 mx-auto flex justify-between items-center">
             <!-- Logo -->
             <a href="./dashboard.php" class="text-xl font-semibold">Library</a>
