@@ -4,9 +4,16 @@ ini_set('display_errors', 1);
 
 include './backend/connection.php';
 
-// Check if user_data cookie exists
-$user_email = isset($_COOKIE["user_data"]) ? json_decode($_COOKIE["user_data"], true)[0] : null;
-$role = $_SESSION['user_data'][3];
+// Check if user_data cookie exists and retrieve the user email
+$user_email = null;
+if (isset($_COOKIE["user_data"])) {
+    $user_data = json_decode($_COOKIE["user_data"], true);
+    if (isset($user_data[0])) {
+        $user_email = $user_data[0];
+    }
+}
+
+$role = isset($_SESSION['user_data'][3]) ? $_SESSION['user_data'][3] : null;
 
 // Redirect if no user is found
 if (!$user_email) {
@@ -22,7 +29,7 @@ $stmt->execute();
 $result = $stmt->get_result();
 $user = $result->fetch_assoc();
 
-// If not found in 'users', check 'admin'
+// If not found in 'user', check 'admin'
 if (!$user) {
     $query = "SELECT * FROM admin WHERE email = ?";
     $stmt = $con->prepare($query);
@@ -37,87 +44,259 @@ if (!$user) {
     header("Location: index.php");
     exit();
 }
+?>
 
+<div id="Profile"
+    class="my-2 rounded-xl border border-stone-200 max-md:w-full bg-white text-stone-950 shadow-none flex flex-col">
+    <div class="flex flex-col space-y-1.5 p-3">
+        <h3 class="font-semibold leading-none tracking-tight">Profile</h3>
+        <p class="text-sm text-stone-500">Modify your account's profile information here</p>
+    </div>
+    <div class="p-3 pt-0 flex flex-col flex-1">
+        <form class="w-full" id="profile-form">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-3">
+                <!-- Account Name -->
+                <div class="grid gap-3">
+                    <label class="text-sm font-medium">Id</label>
+                    <input type="text" name="id"
+                        class="h-9 w-full rounded-md border border-stone-200 bg-transparent px-3 py-1 text-sm"
+                        value="<?php echo $user['id']; ?>" ... readonly>
+                </div>
+                <!-- Username -->
+                <div class="grid gap-3">
+                    <label class="text-sm font-medium">Account Name</label>
+                    <input type="text" name="name"
+                        class="h-9 w-full rounded-md border border-stone-200 bg-transparent px-3 py-1 text-sm"
+                        value="<?php echo $user['name']; ?>" ... readonly>
+                </div>
+
+                <!-- Email -->
+                <div class="grid gap-3">
+                    <label class="text-sm font-medium">Email</label>
+                    <input type="email" name="email"
+                        class="h-9 w-full rounded-md border border-stone-200 bg-transparent px-3 py-1 text-sm"
+                        value="<?php echo $user['email']; ?>">
+                </div>
+
+                <!-- Phone Number -->
+                <div class="grid gap-3">
+                    <label class="text-sm font-medium">Phone Number</label>
+                    <input type="text" name="phone"
+                        class="h-9 w-full rounded-md border border-stone-200 bg-transparent px-3 py-1 text-sm"
+                        value="<?php echo $user['phone'] ?? ''; ?>">
+                </div>
+
+                <!-- Current Password -->
+                <div class="grid md:col-span-2 gap-3">
+                    <label class="text-sm font-medium">Current Password</label>
+                    <input type="password" name="current_password"
+                        class="h-9 w-full rounded-md border border-stone-200 bg-transparent px-3 py-1 text-sm"
+                        placeholder="Current password">
+                </div>
+
+                <!-- New Password -->
+                <div class="grid md:col-span-2 gap-3">
+                    <label class="text-sm font-medium">New Password</label>
+                    <input type="password" name="password"
+                        class="h-9 w-full rounded-md border border-stone-200 bg-transparent px-3 py-1 text-sm"
+                        placeholder="New password">
+                </div>
+            </div>
+            <!-- Account Avatar Update -->
+            <div class="w-full space-y-5 mt-10">
+                <div>
+                    <label class="text-sm font-medium">Account Avatar Update</label>
+                    <p class="text-xs text-gray-400">Update the avatar of your profile account</p>
+                </div>
+                <div class="flex space-x-4">
+                    <div class="cursor-pointer relative">
+                        <div class="relative overflow-hidden rounded-full w-24 h-24">
+                            <img src="<?php echo $user['avatar'] ?? 'https://via.placeholder.com/92'; ?>"
+                                alt="User Avatar" class="w-full h-full object-cover">
+                        </div>
+                    </div>
+                    <div class="w-full md:w-52 space-y-4">
+                        <input type="file" name="avatar" accept="image/*" class="hidden">
+                    </div>
+                </div>
+            </div>
+            <!-- Save Changes Button -->
+            <div class="mt-5">
+                <button type="submit" class="w-full px-4 py-2 bg-stone-950 text-white rounded-md">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<?php
+if ($user_role === "admin") {
+    echo '
+    <div>
+        <div
+            class="mb-2 rounded-xl border border-stone-200 max-md:w-full bg-white text-stone-950 shadow-none flex flex-col">
+            <div class="flex flex-col space-y-1.5 p-3">
+                <h3 class="font-semibold leading-none tracking-tight">Administrators</h3>
+                <p class="text-sm text-stone-500">Manage users here</p>
+            </div>
+            <div class="p-3 pt-0 flex flex-col flex-1">
+                <div class="grid grid-cols-1 gap-5 mb-3">
+                    <div class="w-full grid gap-3 mb-5">
+                        <label class="text-sm font-medium leading-none">Create new user</label>
+                        <form id="createUserForm" class="w-full grid grid-cols-2 gap-3 items-center">
+                            <input type="text"
+                                class="h-9 w-full rounded-md border border-stone-200 bg-transparent px-3 py-1 text-sm"
+                                placeholder="Account Name" name="name" />
+                            <input type="text"
+                                class="h-9 w-full rounded-md border border-stone-200 bg-transparent px-3 py-1 text-sm"
+                                placeholder="Email" name="email" />
+                            <input type="text "
+                                class="h-9 w-full rounded-md border border-stone-200 bg-transparent px-3 py-1 text-sm"
+                                placeholder="Phone Number" name="phone" />
+                            <input type="password" name="password"
+                                class="h-9 w-full rounded-md border border-stone-200 bg-transparent px-3 py-1 text-sm"
+                                placeholder="Password" />
+                            <button type="submit"
+                                class=" col-span-2 w-full px-4 py-2 bg-stone-950 text-white rounded-md">Create
+                                Account</button>
+                        </form>
+                    </div>
+                    <div class="relative max-h-96 overflow-y-scroll">
+                        <table class="w-full text-sm">
+                            <thead class="sticky top-0 bg-white">
+                                <tr class="border-b">
+                                    <th class="h-12 px-4 text-left">Name</th>
+                                    <th class="h-12 px-4 text-left">Email</th>
+                                    <th class="h-12 px-4 text-right"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="for-user">
+    
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    ';
+}
 ?>
 
 
-<div class="flex justify-center items-center w-full h-[calc(100vh-70px)] bg-white mt-16">
-    <!-- Sidebar -->
-    <!-- <aside class="w-64 bg-white shadow-md p-6">
-        <h2 class="text-xl font-bold text-gray-800">Settings</h2>
-        <ul class="mt-4 space-y-2">
-            <li><a href="#" class="block text-gray-600 hover:text-blue-500">Profile</a></li>
-            <li><a href="#" class="block text-gray-600 hover:text-blue-500">Security</a></li>
-            <li><a href="#" class="block text-gray-600 hover:text-blue-500">Notifications</a></li>
-        </ul>
-    </aside> -->
+<script>
+    const loadUsers = async () => {
+        const response = await fetch('/backend/user_management.php');
+        const users = await response.json();
 
-    <!-- Main Content -->
-    <div class="flex-1 p-8">
-        <div class="max-w-3xl mx-auto bg-white border-[0.5px] rounded-lg p-6">
-            <h2 class="text-2xl font-semibold text-gray-800 border-b pb-4">Profile Settings</h2>
+        const userTableBody = document?.getElementById('for-user');
+        userTableBody.innerHTML = '';
 
-            <div class="flex items-center space-x-6 mt-6 ">
-                <!-- Profile Picture -->
-                <div class="relative  ">
-                    <img src="<?php echo $user['src'] ? $user['src'] : 'default-avatar.png'; ?>" alt="Profile Picture"
-                        class="w-28 h-28 rounded-full border-4 border-gray-200 shadow-sm">
-                    <!-- <label for="profile-pic"
-                        class="absolute bottom-0 right-6 bg-blue-500 text-white p-2 rounded-full cursor-pointer">
-                        <i class="fa fa-camera"></i>
-                    </label> -->
-                    <input type="file" id="profile-pic" class="opacity-0 absolute h-28 w-28 top-0 cursor-pointer"
-                        placeholder="">
-                </div>
+        users.forEach(user => {
+            userTableBody.innerHTML += `
+            <tr class="border-b border-gray-100">
+                <td class="py-4">${user.name}</td>
+                <td class="py-4">${user.email}</td>
+                <td class="py-4 text-right">
+                    <button 
+                        class="delete-user h-8 px-3 rounded-md bg-red-600 text-white text-xs"
+                        data-id="${user.id}"
+                    >Delete</button>
+                </td>
+            </tr>
+        `;
+        });
 
-                <!-- User Info -->
-                <div>
-                    <p class="text-xl font-semibold"><?php echo htmlspecialchars($user["name"]); ?></p>
-                    <p class="text-gray-600"><?php echo htmlspecialchars($role); ?></p>
-                </div>
-            </div>
+        document.querySelectorAll('.delete-user').forEach(button => {
+            button.addEventListener('click', deleteUser);
+        });
+    };
 
-            <!-- Profile Form -->
-            <form class="mt-6 space-y-4">
-                <div>
-                    <label class="block text-gray-700">Full Name</label>
-                    <input type="text" value="<?php echo htmlspecialchars($user["name"]); ?>"
-                        class="w-full p-2 border rounded focus:ring focus:ring-black">
-                </div>
 
-                <div>
-                    <label class="block text-gray-700">Email</label>
-                    <input type="email" value="<?php echo htmlspecialchars($user["email"]); ?>" disabled
-                        class="w-full p-2 border rounded bg-gray-100 cursor-not-allowed">
-                </div>
+    const deleteUser = async (event) => {
+        const userId = event.target.dataset.id;
+        const response = await fetch('/backend/user_management.php', {
+            method: 'DELETE',
+            body: new URLSearchParams({ id: userId })
+        });
+        const result = await response.json();
 
-                <div>
-                    <label class="block text-gray-700">Phone</label>
-                    <input type="text"
-                        value="<?php echo isset($user["phone"]) ? htmlspecialchars($user["phone"]) : 'N/A'; ?>"
-                        class="w-full p-2 border rounded focus:ring focus:ring-black">
-                </div>
+        if (result.status === 'success') {
+            toastr.success(result.message);
+            loadUsers();
+        } else {
+            toastr.error(result.message);
+        }
+    };
 
-                <div>
-                    <label class="block text-gray-700">Joined</label>
-                    <input type="text" value="<?php echo $user['date']; ?>" disabled
-                        class="w-full p-2 border rounded bg-gray-100 cursor-not-allowed">
-                </div>
+    const createUser = async (userData) => {
+        try {
+            const response = await fetch('/backend/user_management.php', {
+                method: 'POST',
+                body: userData
+            });
 
-                <div class="flex justify-between mt-6">
-                    <button type="submit"
-                        class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-md text-sm font-medium">
-                        Save Changes
-                    </button>
+            const result = await response.json();
 
-                    <form id="logout-form" action="./backend/logout.php" method="POST">
-                        <button type="submit"
-                            class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-md text-sm font-medium">
-                            Logout
-                        </button>
-                    </form>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
+            if (result.status === 'success') {
+                toastr.success(result.message);
+                loadUsers();
+            } else {
+                toastr.error(result.message);
+            }
+        } catch (error) {
+            toastr.error('An error occurred: ' + error.message);
+        }
+    };
+
+
+    document?.querySelector('#createUserForm')?.addEventListener('submit', (event) => {
+        event.preventDefault();
+        console.log("yes")
+        const formData = new FormData(event.target);
+
+        if (formData.get('password').length <= 5) {
+            toastr.error('Password must be more than 5 characters');
+            return;
+        }
+
+        createUser(formData);
+    });
+
+    const updateUser = async (userData) => {
+        try {
+            // Append a hidden field to indicate the request type
+            userData.append('_method', 'PUT');
+
+            const response = await fetch('/backend/user_management.php', {
+                method: 'POST',  // Use POST instead of PUT
+                body: userData
+            });
+
+            const result = await response.json();
+
+            if (result.status === 'success') {
+                toastr.success(result.message);
+                loadUsers();
+            } else {
+                toastr.error(result.message);
+            }
+        } catch (error) {
+            toastr.error('An error occurred: ' + error.message);
+        }
+    };
+
+    document.querySelector('#profile-form').addEventListener('submit', (event) => {
+        event.preventDefault();
+        const formData = new FormData(event.target);
+
+        if (formData.get('current_password') !== "" && formData.get('password') !== "" && formData.get('password') === formData.get('current_password') && formData.get('password').length <= 5 && formData.get('current_password').length <= 5) {
+            toastr.error('Password must be more than 5 characters');
+            return;
+        }
+
+        updateUser(formData);
+    });
+
+    loadUsers();
+
+</script>

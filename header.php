@@ -7,6 +7,8 @@
   <script src="https://unpkg.com/@tailwindcss/browser@4"></script>
   <script src="https://unpkg.com/lucide@latest"></script>
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <!-- <link href="//netdna.bootstrapcdn.com/twitter-bootstrap/2.3.1/css/bootstrap-combined.min.css" rel="stylesheet"> -->
+  <link href="/css/toastr.css" rel="stylesheet" type="text/css" />
   <link rel="stylesheet" href="/css/main.css">
 
   <style>

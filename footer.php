@@ -1,3 +1,4 @@
+<script src="/js/toastr.js"></script>
 <script>
     lucide.createIcons();
 </script>
