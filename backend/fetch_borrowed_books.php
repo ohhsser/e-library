@@ -26,7 +26,7 @@ if ($result->num_rows > 0) {
             $book_id = intval(trim($book_id)); // Ensure it's a valid integer
             if ($book_id > 0) {
                 // Fetch book details from the 'books' table
-                $bookStmt = $con->prepare("SELECT id, name, author, category, description, published, quantity, rack_no FROM books WHERE id = ?");
+                $bookStmt = $con->prepare("SELECT id, name, author, category, description, published, quantity, rack_no, src FROM books WHERE id = ?");
                 $bookStmt->bind_param("i", $book_id);
                 $bookStmt->execute();
                 $bookResult = $bookStmt->get_result();
@@ -43,4 +43,3 @@ if ($result->num_rows > 0) {
 }
 
 echo json_encode($books);
-?>

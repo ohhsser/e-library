@@ -2,19 +2,25 @@
 session_start();
 ?>
 
-<div class="outline-none bg-black flex justify-center items-center h-screen">
-    <div class="outline-none w-full max-w-md bg-white p-6 rounded-lg shadow-md">
+<div class="flex justify-center items-center h-screen w-screen bg-[#fff]/50">
+    <div class="w-full max-w-md bg-white p-6 rounded-lg shadow-sm max-md:w-[95%] self-center border border-gray-200">
         <h2 class="outline-none text-2xl font-semibold text-center mb-4">Create an Account</h2>
 
         <?php if (isset($_SESSION['error'])): ?>
             <p class="outline-none text-red-500 text-sm"><?php echo $_SESSION['error'];
-            unset($_SESSION['error']); ?></p>
+                                                            unset($_SESSION['error']); ?></p>
         <?php endif; ?>
 
-        <?php if (isset($_SESSION['success'])): ?>
-            <p class="text-green-500 text-sm"><?php echo $_SESSION['success'];
-            unset($_SESSION['success']); ?></p>
-        <?php endif; ?>
+        <?php
+        // if (isset($_SESSION['success'])): 
+        ?>
+        <p class="text-green-500 text-sm"><?php
+                                            //  echo $_SESSION['success'];
+                                            // unset($_SESSION['success']); 
+                                            ?></p>
+        <?php
+        // endif; 
+        ?>
 
         <form action="./backend/register_action.php" method="POST">
             <input type="text" name="name" placeholder="Full Name" required
@@ -38,7 +44,7 @@ session_start();
         </form>
 
         <p class="outline-none text-center text-sm mt-4">Already have an account? <a href="index.php"
-                class="outline-none text-blue-500">Login</a>
+                class="outline-none text-blue-500 underline">Login</a>
         </p>
     </div>
 </div>

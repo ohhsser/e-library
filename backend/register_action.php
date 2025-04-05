@@ -5,6 +5,12 @@
 session_start();
 include 'connection.php';
 
+// Password validation function
+function isValidPassword($password)
+{
+    return preg_match('/^(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{6,}$/', $password);
+}
+
 if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['register'])) {
     $name = $_POST['name'];
     $email = $_POST['email'];
@@ -18,6 +24,13 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['register'])) {
     // Validate inputs
     if (empty($name) || empty($email) || empty($password) || empty($confirm_password) || empty($role)) {
         $_SESSION['error'] = "All fields are required.";
+        header("Location: ../createaccount.php");
+        exit();
+    }
+
+    // Check password strength
+    if (!isValidPassword($password)) {
+        $_SESSION['error'] = "Password must be at least 6 characters long and contain at least one uppercase letter, one number, and one special character.";
         header("Location: ../createaccount.php");
         exit();
     }
@@ -61,4 +74,3 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_POST['register'])) {
     }
     exit();
 }
-?>

@@ -1,57 +1,9 @@
 <?php
 
 include './backend/connection.php';
-
-// Handle file upload
-function uploadFile($file)
-{
-    $targetDir = "uploads/";
-
-    // Check if the uploads directory exists, if not, create it
-    if (!file_exists($targetDir)) {
-        if (!mkdir($targetDir, 0777, true)) {
-            return "Error: Failed to create upload directory.";
-        }
-    }
-
-    $fileName = basename($file["name"]);
-    $targetFilePath = $targetDir . $fileName;
-    $uploadStatus = $file["error"]; // Check for upload errors
-
-    if ($uploadStatus === UPLOAD_ERR_OK) {
-
-        // Check if the file actually exists
-        if (!is_uploaded_file($file["tmp_name"])) {
-            return "Error: Possible file upload attack.";
-        }
-
-        if (move_uploaded_file($file["tmp_name"], $targetFilePath)) {
-            return $targetFilePath; // Return the path if upload is successful
-        } else {
-            return "Error: Failed to move uploaded file. Check folder permissions.";
-        }
-    } else {
-        // Handle different error messages
-        switch ($uploadStatus) {
-            case UPLOAD_ERR_INI_SIZE:
-            case UPLOAD_ERR_FORM_SIZE:
-                return "Error: File size is too large.";
-            case UPLOAD_ERR_PARTIAL:
-                return "Error: The file was only partially uploaded.";
-            case UPLOAD_ERR_NO_FILE:
-                return "Error: No file was uploaded.";
-            case UPLOAD_ERR_NO_TMP_DIR:
-                return "Error: Missing a temporary folder.";
-            case UPLOAD_ERR_CANT_WRITE:
-                return "Error: Failed to write file to disk.";
-            case UPLOAD_ERR_EXTENSION:
-                return "Error: File upload stopped by a PHP extension.";
-            default:
-                return "Error: Unknown upload error.";
-        }
-    }
-}
-
+session_start(); // Ensure the session is started
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
 // Handle book upload
 if (isset($_POST['upload'])) {
@@ -60,12 +12,13 @@ if (isset($_POST['upload'])) {
     $category = $_POST['category'];
     $description = $_POST['description'];
     $published = $_POST['published'];
+    $src = isset($_SESSION['uploadedBookUrl']) ? $_SESSION['uploadedBookUrl'] : "";
+    unset($_SESSION['uploadedBookUrl']); // Clear session value after retrieving it
+
     $quantity = $_POST['quantity'];
     $rack_no = $_POST['rack_no'];
     $date = date('Y-m-d');
 
-    $src = uploadFile($_FILES['src']);
-    echo $src;
     if ($src) {
         $sql = "INSERT INTO books (name, author, category, description, published, src, quantity, rack_no, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         $stmt = $con->prepare($sql);
@@ -90,8 +43,9 @@ if (isset($_POST['edit'])) {
     $quantity = $_POST['quantity'];
     $rack_no = $_POST['rack_no'];
 
-    if (!empty($_FILES['src']['name'])) {
-        $src = uploadFile($_FILES['src']);
+    if (isset($_SESSION['uploadedBookUrl'])) {
+        $src =  $_SESSION['uploadedBookUrl'] ?? "";
+        unset($_SESSION['uploadedBookUrl']); // Clear session value after retrieving it
     }
 
     $sql = "UPDATE books SET name = ?, author = ?, category = ?, description = ?, published = ?, quantity = ?, rack_no = ?";
@@ -105,7 +59,7 @@ if (isset($_POST['edit'])) {
     $stmt = $con->prepare($sql);
 
     if (isset($src)) {
-        $stmt->bind_param("sssssisisi", $name, $author, $category, $description, $published, $quantity, $rack_no, $src, $id);
+        $stmt->bind_param("sssissisi", $name, $author, $category, $description, $published, $quantity, $rack_no, $src, $id);
     } else {
         $stmt->bind_param("sssssisi", $name, $author, $category, $description, $published, $quantity, $rack_no, $id);
     }
@@ -134,9 +88,47 @@ $subpage = isset($_GET['subpage']) ? $_GET['subpage'] : 'upload';
 $user_role = isset($_COOKIE["user_data"]) ? json_decode($_COOKIE["user_data"])[3] : $_SESSION['user_data'][3];
 
 ?>
+<style>
+    #spinner-overlay {
+        display: none;
+        /* Hidden by default */
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        /* Semi-transparent black */
+        z-index: 9999;
+        justify-content: center;
+        align-items: center;
+    }
 
+    #spinner {
+        width: 50px;
+        height: 50px;
+        border: 5px solid #f3f3f3;
+        border-top: 5px solid #000;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+        0% {
+            transform: rotate(0deg);
+        }
+
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+</style>
 <div class="bg-white  w-screen relative flex max-md:flex-col pl-6 max-md:pl-3 pr-3 gap-6 overflow-hidden mt-16">
     <!-- Sidebar -->
+    <div id="spinner-overlay">
+        <div id="spinner"></div>
+    </div>
+
     <div
         class="w-64 max-md:w-full max-md:mt-6 md:h-[calc(100vh-5.5rem)] p-6 bg-white shadow-md text-white space-y-2 border-gray-200 border rounded-xl md:fixed md:top-[5rem] md:left-2">
         <h1 class="text-2xl font-bold mb-6 text-black">Explore</h1>
@@ -172,8 +164,58 @@ $user_role = isset($_COOKIE["user_data"]) ? json_decode($_COOKIE["user_data"])[3
 
             <?php
             if ($user_role === "admin") {
-                include './components/upload_book.php';
-                include './components/edit_book.php';
+                echo '
+                <div id="upload" class="subpage hidden">
+                <h2 class="text-3xl font-bold mb-4">Upload Book</h2>
+                <!-- Upload Book Form -->
+                <form action="" method="POST" enctype="multipart/form-data" class="space-y-4">
+                    <input type="text" name="name" placeholder="Book Name" required class="w-full p-3 border rounded">
+                    <input type="text" name="author" placeholder="Author" required class="w-full p-3 border rounded">
+                    <input type="text" name="category" placeholder="Category" required class="w-full p-3 border rounded">
+                    <textarea name="description" placeholder="Description" required
+                        class="w-full p-3 border rounded min-h-54"></textarea>
+                    <input type="date" name="published" placeholder="Published (e.g., 2025)" required
+                        class="w-full p-3 border rounded">
+                    <div class="w-full relative overflow-hidden">
+                        <label for="book-upload" id="file-label" class="block w-full p-3 border rounded cursor-pointer text-left bg-white hover:bg-gray-100">
+                            Choose a File
+                        </label>
+                        <input type="file" id="book-upload" name="src" required class="opacity-0 absolute top-0" onchange="updateFileName(this)">
+                    </div>
+
+                    <input type="number" name="quantity" placeholder="Quantity" required class="w-full p-3 border rounded">
+                    <input type="text" name="rack_no" placeholder="Rack No" required class="w-full p-3 border rounded">
+                    <button type="submit" name="upload" id="upload" class="w-full bg-black text-white p-3 rounded">Upload
+                        Book</button>
+                </form>
+            </div> 
+
+                <div id="edit" class="subpage hidden ">
+                <h2 class="text-3xl font-bold mb-4">Edit Book</h2>
+                <!-- Edit Book Form (Modify as needed) -->
+                <form action="" class="space-y-4" enctype="multipart/form-data" method="POST">
+                    <select name="id" id="bookSelect" class="w-full p-3 border rounded" required>
+                        <option value="">Select a Book</option>
+                        <!-- Options will be populated dynamically -->
+                    </select>
+                    <input type="text" name="name" id="name" placeholder="Book Name" class="w-full p-3 border rounded">
+                    <input type="text" name="author" id="author" placeholder="Author" class="w-full p-3 border rounded">
+                    <input type="text" name="category" id="category" placeholder="Category" class="w-full p-3 border rounded">
+                    <textarea name="description" id="description" placeholder="Description"
+                        class="w-full p-3 border rounded min-h-54"></textarea>
+                    <input type="text" name="published" id="published" placeholder="Published (e.g., 2025)"
+                        class="w-full p-3 border rounded">
+                    <div class="w-full relative overflow-hidden">
+                        <label for="book-upload-edit" id="edit-label" class="block w-full p-3 border rounded cursor-pointer text-left bg-white hover:bg-gray-100">
+                            Choose a File
+                        </label>
+                        <input type="file" id="book-upload-edit" name="src" class="opacity-0 absolute top-0" onchange="editFileName(this)">
+                    </div>
+                    <input type="number" name="quantity" id="quantity" placeholder="Quantity" class="w-full p-3 border rounded">
+                    <input type="text" name="rack_no" id="rack_no" placeholder="Rack No" class="w-full p-3 border rounded">
+                    <button type="submit" name="edit" id="edit-button" class="w-full bg-black text-white p-3 rounded">Edit Book</button>
+                </form>
+            </div>';
             }
             ?>
 
@@ -211,10 +253,11 @@ $user_role = isset($_COOKIE["user_data"]) ? json_decode($_COOKIE["user_data"])[3
                 .then(books => {
                     const booksContainer = document.getElementById('booksContainer');
                     const email = `<?php $user_email = isset($_COOKIE["user_data"]) ? json_decode($_COOKIE["user_data"], true)[0] : null;
-                    echo $user_email; ?>`
+                                    echo $user_email; ?>`
 
                     const role = `<?php $user_role = isset($_COOKIE["user_data"]) ? json_decode($_COOKIE["user_data"])[3] : $_SESSION['user_data'][3];
-                    echo $user_role; ?>`
+                                    echo $user_role; ?>`
+
 
                     const bookButton = (book, email) => {
                         const button = document.createElement("button");
@@ -222,7 +265,7 @@ $user_role = isset($_COOKIE["user_data"]) ? json_decode($_COOKIE["user_data"])[3
 
                         if (role === "admin") {
                             button.innerText = "Edit Book";
-                            button.setAttribute("onclick", "showSubpage('edit', this)");
+                            button.setAttribute("onclick", `populateEditForm(${JSON.stringify(book)})`);
                             button.setAttribute("data-route", "edit");
                         } else {
                             button.innerText = "Borrow";
@@ -239,17 +282,32 @@ $user_role = isset($_COOKIE["user_data"]) ? json_decode($_COOKIE["user_data"])[3
 
                         return button;
                     }
+                    const deleteBookButton = (book, email) => {
+                        const button = document.createElement("button");
+                        button.className = "px-4 py-1 rounded text-sm transition view-btn text-white bg-black hover:bg-black/50";
+
+                        if (role === "admin") {
+                            button.innerText = "Delete Book";
+                            button.setAttribute("onclick", `Delete(${book.id})`);
+                            return button;
+                        }
+                    }
+
                     booksContainer.innerHTML = books.map(book => `
-                    <div class="relative w-full h-0 pb-[56.25%] bg-white shadow-md rounded-lg overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow">
+                    <div class="relative w-full h-0 pb-[56.25%] bg-white shadow-sm rounded-lg overflow-hidden border border-gray-200 hover:shadow-md transition-shadow" >
                         <div class="absolute inset-0 flex flex-col justify-between p-2 max-md:p-4">
+                            <div class="flex flex-row justify-between items-center">
                             <div>
                                 <h4 class="text-lg max-md:text-sm font-bold text-gray-800">${book.name}</h4>
                                 <p class="text-sm text-gray-600">Author: ${book.author}</p>
                                 <p class="text-sm text-gray-600">Category: ${book.category}</p>
+                                <p class="text-sm text-gray-600">Copies Left: ${book.quantity}</p>
                             </div>
-                            <div class="flex justify-between items-center md:mt-2">
+                            <img src="${book.src}" alt="${book.src}" class="aspect-[9/16] h-28 rounded mr-6 object-cover">
+                            </div>
+                            <div class="flex justify-between items-end md:mt-2">
                                 <p class="text-sm text-gray-500">Published: ${book.published}</p>
-                                <div id="button-container-${book.id}"></div>
+                                <div id="button-container-${book.id}" class="flex flex-col gap-1"></div>
                             </div>
                         </div>
                     </div>
@@ -261,25 +319,24 @@ $user_role = isset($_COOKIE["user_data"]) ? json_decode($_COOKIE["user_data"])[3
                         if (buttonContainer) {
                             const buttonElement = bookButton(book, email);
                             buttonContainer.appendChild(buttonElement);
+                            const deleteButtonElement = deleteBookButton(book, email);
+                            buttonContainer.appendChild(deleteButtonElement);
                         }
                     });
+                    const bookSelect = document.getElementById('bookSelect');
+                    if (bookSelect) {
+                        bookSelect.innerHTML = '<option value="">Select a Book</option>';
+                        books?.forEach(book => {
+                            const option = document.createElement('option');
+                            option.value = book.id;
+                            option.textContent = book.name;
+                            bookSelect.appendChild(option);
+                        });
+                    }
+                    // Save books globally for later use
+                    window.existingBooks = books;
                 })
 
-            document.addEventListener('DOMContentLoaded', () => {
-                const bookSelect = document.getElementById('bookSelect');
-                if (bookSelect) {
-                    bookSelect.innerHTML = '<option value="">Select a Book</option>';
-                    books?.forEach(book => {
-                        const option = document.createElement('option');
-                        option.value = book.id;
-                        option.textContent = book.name;
-                        bookSelect.appendChild(option);
-                    });
-                }
-            });
-
-            // Save books globally for later use
-            window.existingBooks = books;
         } catch (error) {
             console.error('Error fetching books:', error);
         }
@@ -294,16 +351,20 @@ $user_role = isset($_COOKIE["user_data"]) ? json_decode($_COOKIE["user_data"])[3
             const borrowedBooks = await response.json()
                 .then(books => {
                     const borrowedContainer = document.getElementById('borrowedContainer');
-
+                    const email = `<?php $user_email = isset($_COOKIE["user_data"]) ? json_decode($_COOKIE["user_data"], true)[0] : null;
+                                    echo $user_email; ?>`
+                    const username = `<?php $user_name = isset($_COOKIE["user_data"]) ? json_decode($_COOKIE["user_data"], true)[1] : null;
+                                        echo $user_name; ?>`
                     // Render books
                     borrowedContainer.innerHTML = books.map(book =>
                         book.book_details.map(bookDetail => `
-                <div class="relative w-full h-0 pb-[56.25%] bg-white shadow-md rounded-lg overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow mt-4">
+                <div class="relative w-full h-0 pb-[56.25%] bg-white shadow-sm rounded-lg overflow-hidden border border-gray-200 hover:shadow-md transition-shadow">
                     <div class="absolute inset-0 flex flex-col justify-between p-2 max-md:p-4">
                         <div>
                             <h4 class="text-lg font-bold text-gray-800">${bookDetail.name}</h4>
                             <p class="text-sm text-gray-600">Author: ${bookDetail.author}</p>
                             <p class="text-sm text-gray-600">Category: ${bookDetail.category}</p>
+                             <p class="text-sm text-gray-600">Copies Left: ${bookDetail.quantity}</p>
                         </div>
                         <div class="flex justify-between items-center md:mt-2">
                             <p class="text-sm text-gray-500">Published: ${bookDetail.published}</p>
@@ -317,7 +378,7 @@ $user_role = isset($_COOKIE["user_data"]) ? json_decode($_COOKIE["user_data"])[3
                             data-published="${bookDetail.published}"
                             data-quantity="${bookDetail.quantity}"
                             data-rack="${bookDetail.rack_no}"
-                            onclick="deleteReservedBook(${bookDetail.id})"
+                            onclick="deleteReservedBook('${username}', '${email}', ${bookDetail.id}, '${bookDetail.name}', '${bookDetail.src}')"
                         >Delete</button>
                         </div>
                     </div>
@@ -338,40 +399,61 @@ $user_role = isset($_COOKIE["user_data"]) ? json_decode($_COOKIE["user_data"])[3
 
     function Delete(id) {
         confirm("Are you sure want to delete ", id);
+        showSpinner();
         $.ajax({
             type: "POST",
             url: "./backend/deleteBook.php",
             data: {
                 id: id
             },
-            success: function (data) {
+            success: function(data) {
                 window.location.replace(`?page=books`);
                 showSubpage("borrow", this)
             },
-            error: function () {
+            error: function() {
                 toastr.error("Failed to delete")
+            },
+            complete: function() {
+                hideSpinner(); // Hide spinner after request completes
             }
         })
     }
+
     //delete reserved books
-    function deleteReservedBook(id) {
-        console.log(id)
+    function deleteReservedBook(username, email, id, name, src) {
+        showSpinner();
         $.ajax({
-            method: "POST",
+            type: "POST",
             url: "./backend/deleteReservedBook.php",
             data: {
-                id: id
+                username: username,
+                email: email,
+                id: id,
+                book_name: name,
+                src: src
             },
-            success: function (res) {
-
-                toastr.success("Successfully deleted.")
-                fetchBorrowedBooks();
+            dataType: "json", // Expect JSON response
+            success: function(response) {
+                if (response.status === "success") {
+                    toastr.success(response.message || "Book successfully returned.");
+                    fetchBooks(); // Refresh book list
+                    fetchBorrowedBooks();
+                } else {
+                    toastr.error(response.message || "Failed to return book.");
+                }
+            },
+            error: function(xhr) {
+                toastr.error("Error: " + (xhr.responseJSON?.message || "Unexpected error occurred."));
+                hideSpinner();
+            },
+            complete: function() {
+                hideSpinner(); // Hide spinner after request completes
             }
-        })
+        });
     }
 
     function reserveBook(book_id, bookname, user_email, src) {
-        //send parameter to the backend
+        showSpinner();
         $.ajax({
             type: "POST",
             url: "./backend/reserveBooks.php",
@@ -381,21 +463,144 @@ $user_role = isset($_COOKIE["user_data"]) ? json_decode($_COOKIE["user_data"])[3
                 bookname: bookname,
                 src: src
             },
-            success: function (data) {
-                if (data === "success") {
-                    toastr.success("Book successfully reserved.");
+            dataType: "json", // Expect JSON response from backend
+            success: function(response) {
+                if (response.status === "success") {
+                    toastr.success(response.message || "Book successfully reserved.");
                     fetchBooks();
                     fetchBorrowedBooks();
-                } else if (data === "found") {
-                    toastr.error("Selected book already reserved.")
                 } else {
-                    toastr.error("500!!.  Failed to reserved book.");
+                    toastr.error(response.message || "500!! Failed to reserve book.");
                 }
             },
-            error: function () {
-                toastr.error("404!!. Client side error.")
+            error: function(xhr, status, error) {
+                toastr.error("Error: " + (xhr.responseJSON?.message || "Unexpected error occurred."));
+                hideSpinner();
+            },
+            complete: function() {
+                hideSpinner(); // Hide spinner after request completes
             }
-        })
+        });
     }
 
+    function showSpinner() {
+        document.getElementById('spinner-overlay').style.display = 'flex';
+    }
+
+    function hideSpinner() {
+        document.getElementById('spinner-overlay').style.display = 'none';
+    }
+
+    document?.getElementById('book-upload')?.addEventListener('change', function(event) {
+        const fileInput = event.target;
+        const formData = new FormData();
+        formData.append('document', fileInput.files[0]);
+        showSpinner();
+        $.ajax({
+            type: "POST",
+            url: "./backend/bookUpload.php",
+            data: formData,
+            processData: false, // Prevent jQuery from processing the data
+            contentType: false, // Prevent jQuery from setting content-type header
+            success: function(data) {
+                try {
+                    if (data.success) {
+                        uploadedBookUrl = data.BookUrl;
+                        toastr.success("Book uploaded successfully.");
+                    } else {
+                        toastr.error(data.message || "Failed to upload Book.");
+                    }
+                } catch (error) {
+                    toastr.error("Invalid response from server.");
+                }
+            },
+            error: function() {
+                toastr.error("404!! Client-side error.");
+                hideSpinner(); // Hide spinner after request completes
+            },
+            complete: function() {
+                hideSpinner(); // Hide spinner after request completes
+            }
+        });
+    });
+
+    document?.getElementById('book-upload-edit')?.addEventListener('change', function(event) {
+        const fileInput = event.target;
+        const formData = new FormData();
+        formData.append('document', fileInput.files[0]);
+        showSpinner();
+        $.ajax({
+            type: "POST",
+            url: "./backend/bookUpload.php",
+            data: formData,
+            processData: false, // Prevent jQuery from processing the data
+            contentType: false, // Prevent jQuery from setting content-type header
+            success: function(data) {
+                try {
+                    if (data.success) {
+                        uploadedBookUrl = data.BookUrl;
+                        toastr.success("Book uploaded successfully.");
+                    } else {
+                        toastr.error(data.message || "Failed to upload Book.");
+                    }
+                } catch (error) {
+                    toastr.error("Invalid response from server.");
+                }
+            },
+            error: function() {
+                toastr.error("404!! Client-side error.");
+            },
+            complete: function() {
+                hideSpinner(); // Hide spinner after request completes
+            }
+        });
+    });
+</script>
+
+<script>
+    function updateFileName(input) {
+        const fileLabel = document.getElementById('file-label');
+        if (input.files && input.files[0]) {
+            fileLabel.textContent = input.files[0].name;
+        }
+    }
+
+    function editFileName(input) {
+        const editLabel = document.getElementById('edit-label');
+        if (input.files && input.files[0]) {
+            editLabel.textContent = input.files[0].name;
+        }
+    }
+</script>
+
+<script>
+    // Populate form fields when a book is selected
+    document.getElementById('bookSelect')?.addEventListener('change', () => {
+        const selectedBook = window.existingBooks.find(book => book.id === document.getElementById('bookSelect').value);
+        console.log(selectedBook)
+        if (selectedBook) {
+            document.getElementById('name').value = selectedBook.name;
+            document.getElementById('author').value = selectedBook.author;
+            document.getElementById('category').value = selectedBook.category;
+            document.getElementById('description').value = selectedBook.description;
+            document.getElementById('published').value = selectedBook.published;
+            document.getElementById('quantity').value = selectedBook.quantity;
+            document.getElementById('rack_no').value = selectedBook.rack_no;
+            document.getElementById('edit-label').textContent = selectedBook.src
+        }
+    });
+
+    const populateEditForm = (book) => {
+        document.getElementById("bookSelect").value = book.id;
+        document.getElementById("name").value = book.name;
+        document.getElementById("author").value = book.author;
+        document.getElementById("category").value = book.category;
+        document.getElementById("description").value = book.description;
+        document.getElementById("published").value = book.published;
+        document.getElementById("quantity").value = book.quantity;
+        document.getElementById("rack_no").value = book.rack_no;
+        document.getElementById("edit-label").textContent = book.src || "Choose a File";
+
+        showSubpage('edit', this); // Show the edit form
+    };
 </script>

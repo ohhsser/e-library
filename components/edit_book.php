@@ -13,7 +13,12 @@
             class="w-full p-3 border rounded min-h-32"></textarea>
         <input type="text" name="published" id="published" placeholder="Published (e.g., 2025)"
             class="w-full p-3 border rounded">
-        <input type="file" name="src" id="src" class="w-full p-3 border rounded">
+        <div class="w-full">
+            <label for="book-upload" id="file-label" class="block w-full p-3 border rounded cursor-pointer text-left bg-white hover:bg-gray-100">
+                Choose a File
+            </label>
+            <input type="file" id="book-upload" name="src" required class="hidden" onchange="updateFileName(this)">
+        </div>
         <input type="number" name="quantity" id="quantity" placeholder="Quantity" class="w-full p-3 border rounded">
         <input type="text" name="rack_no" id="rack_no" placeholder="Rack No" class="w-full p-3 border rounded">
         <button type="submit" name="edit" id="edit" class="w-full bg-black text-white p-3 rounded">Edit

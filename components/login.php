@@ -6,13 +6,13 @@ if (isset($_SESSION['user_id'])) {
 }
 ?>
 
-<div class="grid place-content-center h-screen w-screen bg-black">
-    <div class="w-full max-w-md bg-white p-6 rounded-lg shadow-md">
+<div class="flex justify-center items-center h-screen w-screen bg-[#fff]/50">
+    <div class="w-full max-w-md bg-white p-6 rounded-lg shadow-sm max-md:w-[95%] self-center border border-gray-200">
         <h2 class="text-2xl font-semibold text-center mb-4">Login</h2>
 
         <?php if (isset($_SESSION['error'])): ?>
             <p class="text-red-500 text-sm"><?php echo $_SESSION['error'];
-            unset($_SESSION['error']); ?></p>
+                                            unset($_SESSION['error']); ?></p>
         <?php endif; ?>
 
         <form action="./backend/auth.php" method="POST">
@@ -29,8 +29,8 @@ if (isset($_SESSION['user_id'])) {
                 class="outline-none w-full bg-black text-white py-2 rounded">Login</button>
         </form>
         <br>
-        <a class="w-full flex justify-center items-center" href="createaccount.php">
-            <u class="self-center text-center">New user? Create Account</u>
-        </a>
+        <p class="outline-none text-center text-sm mt-4">New user? <a href="createaccount.php"
+                class="outline-none text-blue-500 underline">Create Account</a>
+        </p>
     </div>
 </div>

@@ -8,11 +8,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['_method'] !== 'PUT') {
     $email = $_POST['email'];
     $password = $_POST['password'];
     $phone = $_POST['phone'];
-    $src = "cat.webp_6277b6abbf35d";
+    $role = $_POST['role'];
+    $src = isset($_POST['src']) ? $_POST['src'] : "";
     $date = date("y/m/d");
 
     // Check if email already exists
-    $checkEmailSql = "SELECT * FROM user WHERE email = '$email'";
+    $selectedTable = ($role === "user") ? "user" : "admin";
+
+    $checkEmailSql = "SELECT * FROM `$selectedTable` WHERE email = '$email'";
     $result = $con->query($checkEmailSql);
 
     if ($result->num_rows > 0) {
@@ -24,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['_method'] !== 'PUT') {
     $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
 
     // Insert new user
-    $sql = "INSERT INTO user (name, email, phone, password, src, date) 
+    $sql = "INSERT INTO `$selectedTable` (name, email, phone, password, src, date) 
             VALUES ('$name', '$email', '$phone', '$hashedPassword', '$src', '$date')";
 
     if ($con->query($sql) === TRUE) {
@@ -40,27 +43,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $_POST['_method'] !== 'PUT') {
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     $users = [];
 
+    // Fetch all users from the 'user' table
     $userResult = $con->query("SELECT * FROM user");
     while ($row = $userResult->fetch_assoc()) {
+        $row['role'] = 'user'; // Add role to each user entry
         $users[] = $row;
     }
 
-    $resultAdmin = $con->query("SELECT * FROM admin");
-    while ($row = $resultAdmin->fetch_assoc()) {
+    // Fetch all users from the 'admin' table
+    $adminResult = $con->query("SELECT * FROM admin");
+    while ($row = $adminResult->fetch_assoc()) {
+        $row['role'] = 'admin'; // Add role to each admin entry
         $users[] = $row;
     }
-
 
     echo json_encode($users);
     exit;
 }
 
+
 // Handle deleting a user
 if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
     parse_str(file_get_contents("php://input"), $data);
     $userId = $data['id'];
+    $email = $data['email'];
+    $role = $data['role'];
 
-    $sql = "DELETE FROM user WHERE id = '$userId'";
+    $selectedTable = ($role === "user") ? "user" : "admin";
+    $sql = "DELETE FROM `$selectedTable` WHERE id = '$userId' AND email = '$email'";
 
     if ($con->query($sql) === TRUE) {
         echo json_encode(["status" => "success", "message" => "User deleted successfully"]);
@@ -71,58 +81,69 @@ if ($_SERVER['REQUEST_METHOD'] === 'DELETE') {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['_method']) && $_POST['_method'] === 'PUT') {
-
     $id = $_POST['id'];
     $email = $_POST['email'];
     $phone = $_POST['phone'];
     $password = isset($_POST['password']) ? $_POST['password'] : null;
-    $src = isset($_FILES['src']) ? $_FILES['src'] : null;
+    $src = isset($_POST['avatarUrl']) ? $_POST['avatarUrl'] : null;
+    $role = isset($_POST['role']) ? $_POST['role'] : null;
 
-    $updateFields = [];
+        $updateFields = [];
     $params = [];
-
+    $types = ''; // To store parameter types for bind_param
+    
     if ($email) {
         $updateFields[] = "email = ?";
         $params[] = $email;
+        $types .= 's'; // 's' for string
     }
-
+    
     if ($phone) {
         $updateFields[] = "phone = ?";
         $params[] = $phone;
+        $types .= 's'; // 's' for string
     }
-
+    
     if ($password) {
         $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
         $updateFields[] = "password = ?";
         $params[] = $hashedPassword;
+        $types .= 's'; // 's' for string
     }
-
-    if ($src && $src['error'] === 0) {
-        $srcPath = 'uploads/' . basename($src['name']);
-        move_uploaded_file($src['tmp_name'], $srcPath);
+    
+    if ($src) {
         $updateFields[] = "src = ?";
-        $params[] = $srcPath;
+        $params[] = $src;
+        $types .= 's'; // 's' for string
     }
-
+    
     if (empty($updateFields)) {
         echo json_encode(["status" => "error", "message" => "No data to update"]);
         exit;
     }
-
-    $sql = "UPDATE user SET " . implode(', ', $updateFields) . " WHERE id = ?";
+    
+    $selectedTable = ($role === "user") ? "user" : "admin";
+    $sql = "UPDATE `$selectedTable` SET " . implode(', ', $updateFields) . " WHERE id = ?";
     $params[] = $id;
+    $types .= 'i'; // 'i' for integer (id)
+    
     $stmt = $con->prepare($sql);
-    $stmt->bind_param(str_repeat('s', count($params)), ...$params);
-
+    if (!$stmt) {
+        echo json_encode(["status" => "error", "message" => "Database error: " . $con->error]);
+        exit;
+    }
+    
+    $stmt->bind_param($types, ...$params);
+    
     if ($stmt->execute()) {
-        echo json_encode(["status" => "success", "message" => "User updated successfully"]);
+        if ($stmt->affected_rows > 0) {
+            echo json_encode(["status" => "success", "message" => "User updated successfully"]);
+        } else {
+            echo json_encode(["status" => "error", "message" => "No rows updated"]);
+        }
     } else {
         echo json_encode(["status" => "error", "message" => "Error: " . $stmt->error]);
     }
-
+    
     $stmt->close();
-    exit;
 }
-
-$con->close();
-?>
