@@ -258,7 +258,17 @@ $user_role = isset($_COOKIE["user_data"]) ? json_decode($_COOKIE["user_data"])[3
                     const role = `<?php $user_role = isset($_COOKIE["user_data"]) ? json_decode($_COOKIE["user_data"])[3] : $_SESSION['user_data'][3];
                                     echo $user_role; ?>`
 
+ const deleteBookButton = (book, email) => {
+                        const button = document.createElement("button");
+                        button.className = "px-4 py-1 rounded text-sm transition view-btn text-white bg-black hover:bg-black/50";
 
+                        if (role === "admin") {
+                            button.innerText = "Delete Book";
+                            button.setAttribute("onclick", `Delete(${book.id})`);
+                            return button;
+                        }
+                    }
+                    
                     const bookButton = (book, email) => {
                         const button = document.createElement("button");
                         button.className = "px-4 py-1 rounded text-sm transition view-btn text-white bg-black hover:bg-black/50";
@@ -281,16 +291,6 @@ $user_role = isset($_COOKIE["user_data"]) ? json_decode($_COOKIE["user_data"])[3
                         }
 
                         return button;
-                    }
-                    const deleteBookButton = (book, email) => {
-                        const button = document.createElement("button");
-                        button.className = "px-4 py-1 rounded text-sm transition view-btn text-white bg-black hover:bg-black/50";
-
-                        if (role === "admin") {
-                            button.innerText = "Delete Book";
-                            button.setAttribute("onclick", `Delete(${book.id})`);
-                            return button;
-                        }
                     }
 
                     booksContainer.innerHTML = books.map(book => `
@@ -320,9 +320,12 @@ $user_role = isset($_COOKIE["user_data"]) ? json_decode($_COOKIE["user_data"])[3
                             const buttonElement = bookButton(book, email);
                             buttonContainer.appendChild(buttonElement);
                             const deleteButtonElement = deleteBookButton(book, email);
-                            buttonContainer.appendChild(deleteButtonElement);
+                            if (deleteButtonElement) {
+                                buttonContainer.appendChild(deleteButtonElement);
+                            }
                         }
                     });
+                    
                     const bookSelect = document.getElementById('bookSelect');
                     if (bookSelect) {
                         bookSelect.innerHTML = '<option value="">Select a Book</option>';
