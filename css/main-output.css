@@ -628,6 +628,10 @@ video {
   grid-column: span 2 / span 2;
 }
 
+.col-span-full {
+  grid-column: 1 / -1;
+}
+
 .mx-auto {
   margin-left: auto;
   margin-right: auto;
@@ -971,12 +975,12 @@ video {
   background-color: rgb(191 190 228 / var(--tw-bg-opacity, 1));
 }
 
-.bg-\[\#fdf2e9\]\/50 {
-  background-color: rgb(253 242 233 / 0.5);
-}
-
 .bg-\[\#ff31311c\] {
   background-color: #ff31311c;
+}
+
+.bg-\[\#fff\]\/50 {
+  background-color: rgb(255 255 255 / 0.5);
 }
 
 .bg-\[blanchedalmond\] {
@@ -1020,10 +1024,6 @@ video {
 .bg-white {
   --tw-bg-opacity: 1;
   background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1));
-}
-
-.bg-\[\#fff\]\/50 {
-  background-color: rgb(255 255 255 / 0.5);
 }
 
 .object-cover {

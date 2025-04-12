@@ -158,7 +158,17 @@ $user_role = isset($_COOKIE["user_data"]) ? json_decode($_COOKIE["user_data"])[3
         <div class="flex-1 space-y-6 pt-3">
             <!-- All Book Subpage -->
             <div id="explore" class="subpage">
-                <h2 class="text-3xl font-bold mb-4">Explore Books</h2>
+                <div class="w-full flex justify-between items-center">
+                    <h2 class="text-3xl font-bold mb-4">Explore Books</h2>
+                    <div class="w-full mb-4">
+                        <input
+                            type="text"
+                            id="searchBar"
+                            placeholder="Search by name, category, or author..."
+                            class="w-full p-3 border rounded"
+                            oninput="filterBooks()" />
+                    </div>
+                </div>
                 <div id="booksContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"></div>
             </div>
 
@@ -258,7 +268,7 @@ $user_role = isset($_COOKIE["user_data"]) ? json_decode($_COOKIE["user_data"])[3
                     const role = `<?php $user_role = isset($_COOKIE["user_data"]) ? json_decode($_COOKIE["user_data"])[3] : $_SESSION['user_data'][3];
                                     echo $user_role; ?>`
 
- const deleteBookButton = (book, email) => {
+                    const deleteBookButton = (book, email) => {
                         const button = document.createElement("button");
                         button.className = "px-4 py-1 rounded text-sm transition view-btn text-white bg-black hover:bg-black/50";
 
@@ -268,7 +278,7 @@ $user_role = isset($_COOKIE["user_data"]) ? json_decode($_COOKIE["user_data"])[3
                             return button;
                         }
                     }
-                    
+
                     const bookButton = (book, email) => {
                         const button = document.createElement("button");
                         button.className = "px-4 py-1 rounded text-sm transition view-btn text-white bg-black hover:bg-black/50";
@@ -325,7 +335,7 @@ $user_role = isset($_COOKIE["user_data"]) ? json_decode($_COOKIE["user_data"])[3
                             }
                         }
                     });
-                    
+
                     const bookSelect = document.getElementById('bookSelect');
                     if (bookSelect) {
                         bookSelect.innerHTML = '<option value="">Select a Book</option>';
@@ -606,4 +616,22 @@ $user_role = isset($_COOKIE["user_data"]) ? json_decode($_COOKIE["user_data"])[3
 
         showSubpage('edit', this); // Show the edit form
     };
+</script>
+<script>
+    function filterBooks() {
+        const query = document.getElementById('searchBar').value.toLowerCase();
+        const books = document.querySelectorAll('#booksContainer > div');
+
+        books.forEach(book => {
+            const name = book.querySelector('h4').textContent.toLowerCase();
+            const author = book.querySelector('p:nth-child(2)').textContent.toLowerCase();
+            const category = book.querySelector('p:nth-child(3)').textContent.toLowerCase();
+
+            if (name.includes(query) || author.includes(query) || category.includes(query)) {
+                book.style.display = 'block';
+            } else {
+                book.style.display = 'none';
+            }
+        });
+    }
 </script>
