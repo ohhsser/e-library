@@ -123,6 +123,7 @@ $user_role = isset($_COOKIE["user_data"]) ? json_decode($_COOKIE["user_data"])[3
         }
     }
 </style>
+
 <div class="bg-white  w-screen relative flex max-md:flex-col pl-6 max-md:pl-3 pr-3 gap-6 overflow-hidden mt-16">
     <!-- Sidebar -->
     <div id="spinner-overlay">
